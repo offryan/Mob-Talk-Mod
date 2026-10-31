@@ -12,8 +12,7 @@ import br.com.mobtalk.profile.MobProfileManager;
 import br.com.mobtalk.social.MobRelationship;
 import br.com.mobtalk.social.MobRelationshipManager;
 import br.com.mobtalk.threat.MobThreatAssessment;
-import br.com.mobtalk.threat.MobThreatEvaluator;
-import br.com.mobtalk.threat.MobThreatLevel;
+import br.com.mobtalk.threat.MobThreatManager;
 
 import net.minecraft.world.entity.Mob;
 
@@ -102,7 +101,7 @@ public final class MobIntentEvaluator {
                 );
 
         MobThreatAssessment threat =
-                MobThreatEvaluator.evaluate(
+                MobThreatManager.getThreat(
                         mob,
                         targetId
                 );
@@ -268,15 +267,17 @@ public final class MobIntentEvaluator {
                             threat
                     );
 
-            MobTalk.LOGGER.debug(
-                    "MobTalk INTENÇÃO ESTÁVEL: mantendo FLEE | ameaça={} | score={} | alvo={}",
-                    threat.level(),
-                    String.format(
-                            "%.2f",
-                            threat.score()
-                    ),
-                    targetId
-            );
+            if (MobTalk.LOGGER.isDebugEnabled()) {
+                MobTalk.LOGGER.debug(
+                        "MobTalk INTENÇÃO ESTÁVEL: mantendo FLEE | ameaça={} | score={} | alvo={}",
+                        threat.level(),
+                        String.format(
+                                "%.2f",
+                                threat.score()
+                        ),
+                        targetId
+                );
+            }
 
             return MobIntent.of(
                     MobIntentType.FLEE,
@@ -397,20 +398,22 @@ public final class MobIntentEvaluator {
                         threat
                 );
 
-        MobTalk.LOGGER.debug(
-                "MobTalk INTENÇÃO AMEAÇA: perfil={} | ameaça={} | score={} | resposta={} | prioridade={}",
-                profile.type(),
-                threat.level(),
-                String.format(
-                        "%.2f",
-                        threat.score()
-                ),
-                threatIntent,
-                String.format(
-                        "%.2f",
-                        priority
-                )
-        );
+        if (MobTalk.LOGGER.isDebugEnabled()) {
+            MobTalk.LOGGER.debug(
+                    "MobTalk INTENÇÃO AMEAÇA: perfil={} | ameaça={} | score={} | resposta={} | prioridade={}",
+                    profile.type(),
+                    threat.level(),
+                    String.format(
+                            "%.2f",
+                            threat.score()
+                    ),
+                    threatIntent,
+                    String.format(
+                            "%.2f",
+                            priority
+                    )
+            );
+        }
 
         return MobIntent.of(
                 threatIntent,
@@ -656,7 +659,7 @@ public final class MobIntentEvaluator {
         }
 
         MobThreatAssessment threat =
-                MobThreatEvaluator.evaluate(
+                MobThreatManager.getThreat(
                         mob,
                         entry.entityId()
                 );

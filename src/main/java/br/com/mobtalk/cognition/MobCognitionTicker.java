@@ -1,5 +1,9 @@
 package br.com.mobtalk.cognition;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import br.com.mobtalk.MobTalk;
 import br.com.mobtalk.behavior.MobBehavior;
 import br.com.mobtalk.behavior.MobBehaviorExecutor;
@@ -17,6 +21,9 @@ import br.com.mobtalk.memory.MobMemory;
 import br.com.mobtalk.memory.MobMemoryManager;
 import br.com.mobtalk.perception.MobPerception;
 import br.com.mobtalk.social.MobRelationshipManager;
+import br.com.mobtalk.threat.MobThreatAssessment;
+import br.com.mobtalk.threat.MobThreatEvaluator;
+import br.com.mobtalk.threat.MobThreatManager;
 import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -37,6 +44,8 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
  * RELACIONAMENTO
  *     ↓
  * CONTEXTO
+ *     ↓
+ * AMEAÇA
  *     ↓
  * INTENÇÃO
  *     ↓
@@ -153,7 +162,18 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 3. INTENÇÃO
+         * 3. AMEAÇA
+         * =====================================================
+         *
+         * Cada entidade lembrada é avaliada uma única vez
+         * por ciclo. A intenção consulta o resultado
+         * armazenado em vez de recalcular.
+         */
+        updateThreats(mob);
+
+        /*
+         * =====================================================
+         * 4. INTENÇÃO
          * =====================================================
          *
          * O mob interpreta o que deseja fazer
@@ -178,7 +198,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 4. DECISÃO
+         * 5. DECISÃO
          * =====================================================
          *
          * A decisão transforma a intenção em uma
@@ -206,7 +226,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 5. COMPORTAMENTO
+         * 6. COMPORTAMENTO
          * =====================================================
          *
          * O comportamento representa aquilo que o mob
@@ -233,7 +253,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 6. EXECUTOR
+         * 7. EXECUTOR
          * =====================================================
          *
          * Finalmente o comportamento é convertido
@@ -250,6 +270,47 @@ public final class MobCognitionTicker {
                 currentIntent.type(),
                 currentDecision.type(),
                 currentBehavior.type()
+        );
+    }
+
+    /**
+     * Avalia a ameaça de cada entidade lembrada
+     * e armazena o resultado do ciclo.
+     *
+     * Avaliações de entidades que saíram da memória
+     * são descartadas junto com o ciclo anterior.
+     */
+    private static void updateThreats(
+            Mob mob
+    ) {
+
+        MobMemory memory =
+                MobMemoryManager.getMemory(mob);
+
+        if (memory == null) {
+            return;
+        }
+
+        Map<UUID, MobThreatAssessment> assessments =
+                new HashMap<>();
+
+        for (MemoryEntry entry : memory.getMemories()) {
+
+            MobThreatAssessment assessment =
+                    MobThreatEvaluator.evaluate(
+                            mob,
+                            entry.entityId()
+                    );
+
+            assessments.put(
+                    entry.entityId(),
+                    assessment
+            );
+        }
+
+        MobThreatManager.setThreats(
+                mob,
+                assessments
         );
     }
 
@@ -439,8 +500,8 @@ public final class MobCognitionTicker {
      * Compara UUIDs de maneira segura.
      */
     private static boolean sameTarget(
-            java.util.UUID first,
-            java.util.UUID second
+            UUID first,
+            UUID second
     ) {
 
         if (first == null) {

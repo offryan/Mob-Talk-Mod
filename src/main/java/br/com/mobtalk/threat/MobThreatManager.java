@@ -83,6 +83,33 @@ public final class MobThreatManager {
     }
 
     /**
+     * Substitui todas as avaliações de ameaça do mob.
+     *
+     * Usado pelo ciclo cognitivo, que avalia todas as
+     * entidades lembradas de uma vez. Entidades que não
+     * estão mais na memória deixam de ter avaliação.
+     */
+    public static void setThreats(
+            Mob mob,
+            Map<UUID, MobThreatAssessment> assessments
+    ) {
+
+        if (mob == null) {
+            return;
+        }
+
+        if (assessments == null || assessments.isEmpty()) {
+            THREATS.remove(mob);
+            return;
+        }
+
+        THREATS.put(
+                mob,
+                assessments
+        );
+    }
+
+    /**
      * Remove a avaliação de ameaça de uma entidade.
      */
     public static void removeThreat(

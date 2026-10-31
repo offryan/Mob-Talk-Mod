@@ -112,27 +112,34 @@ public final class MobThreatEvaluator {
                         lastAttackAge
                 );
 
-        MobTalk.LOGGER.debug(
-                "MobTalk AMEAÇA: {} | alvo={} | nível={} | score={} | ataques={} | dano={} | maiorDano={} | repetido={} | idade={} ticks",
-                mob.getType(),
-                targetId,
-                level,
-                String.format(
-                        "%.2f",
-                        score
-                ),
-                recentAttackCount,
-                String.format(
-                        "%.2f",
-                        recentDamage
-                ),
-                String.format(
-                        "%.2f",
-                        highestRecentDamage
-                ),
-                repeatedAttack,
-                lastAttackAge
-        );
+        /*
+         * A avaliação roda para cada entidade lembrada em
+         * todo ciclo: a formatação só acontece quando o
+         * log de diagnóstico está ativo.
+         */
+        if (MobTalk.LOGGER.isDebugEnabled()) {
+            MobTalk.LOGGER.debug(
+                    "MobTalk AMEAÇA: {} | alvo={} | nível={} | score={} | ataques={} | dano={} | maiorDano={} | repetido={} | idade={} ticks",
+                    mob.getType(),
+                    targetId,
+                    level,
+                    String.format(
+                            "%.2f",
+                            score
+                    ),
+                    recentAttackCount,
+                    String.format(
+                            "%.2f",
+                            recentDamage
+                    ),
+                    String.format(
+                            "%.2f",
+                            highestRecentDamage
+                    ),
+                    repeatedAttack,
+                    lastAttackAge
+            );
+        }
 
         return assessment;
     }
