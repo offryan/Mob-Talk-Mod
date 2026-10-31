@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.function.Predicate;
 
 import net.minecraft.world.entity.Mob;
 
@@ -23,11 +24,97 @@ import net.minecraft.world.entity.Mob;
  */
 public final class MobRelationshipManager {
 
+    /**
+     * Ticks sem nova agressão para a hostilidade
+     * cair pela metade.
+     *
+     * 6000 ticks = aproximadamente 5 minutos.
+     */
+    public static final long HOSTILITY_HALF_LIFE_TICKS = 6000L;
+
     private static final Map<Mob, Map<UUID, MobRelationship>>
             RELATIONSHIPS = new WeakHashMap<>();
 
     private MobRelationshipManager() {
         // Classe utilitária.
+    }
+
+    /**
+     * Faz a hostilidade de todas as relações do mob
+     * diminuir com o tempo decorrido.
+     *
+     * Novas agressões continuam aumentando a hostilidade
+     * normalmente; o decaimento só a reduz aos poucos.
+     *
+     * @param elapsedTicks ticks desde o último decaimento
+     */
+    public static void decayHostility(
+            Mob mob,
+            long elapsedTicks
+    ) {
+
+        if (mob == null || elapsedTicks <= 0L) {
+            return;
+        }
+
+        Map<UUID, MobRelationship> relationships =
+                RELATIONSHIPS.get(mob);
+
+        if (relationships == null) {
+            return;
+        }
+
+        double factor =
+                Math.pow(
+                        0.5D,
+                        (double) elapsedTicks
+                                / HOSTILITY_HALF_LIFE_TICKS
+                );
+
+        relationships.replaceAll((entityId, relationship) ->
+                relationship.hostility() > 0.0D
+                        ? relationship.decayHostility(factor)
+                        : relationship
+        );
+    }
+
+    /**
+     * Remove as relações que não devem mais ser mantidas.
+     *
+     * @param shouldForget critério de remoção
+     * @return quantidade de relações removidas
+     */
+    public static int forgetRelationships(
+            Mob mob,
+            Predicate<MobRelationship> shouldForget
+    ) {
+
+        if (mob == null || shouldForget == null) {
+            return 0;
+        }
+
+        Map<UUID, MobRelationship> relationships =
+                RELATIONSHIPS.get(mob);
+
+        if (relationships == null) {
+            return 0;
+        }
+
+        int before =
+                relationships.size();
+
+        relationships.values().removeIf(
+                shouldForget
+        );
+
+        int removed =
+                before - relationships.size();
+
+        if (relationships.isEmpty()) {
+            RELATIONSHIPS.remove(mob);
+        }
+
+        return removed;
     }
 
     /**

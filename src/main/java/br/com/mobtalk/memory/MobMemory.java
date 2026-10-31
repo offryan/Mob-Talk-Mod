@@ -35,6 +35,15 @@ public final class MobMemory {
     public static final long DEFAULT_MEMORY_DURATION_TICKS = 600L;
 
     /**
+     * Tempo que a memória de uma entidade que atacou o mob
+     * permanece depois do último ataque, mesmo fora de vista.
+     *
+     * 12000 ticks = aproximadamente 10 minutos. Nesse ponto
+     * a lembrança do ataque já pesa menos de 5% na ameaça.
+     */
+    public static final long ATTACK_MEMORY_DURATION_TICKS = 12000L;
+
+    /**
      * Armazena as memórias utilizando o UUID da entidade
      * percebida como identificador.
      */
@@ -230,12 +239,10 @@ public final class MobMemory {
     /**
      * Remove memórias que ficaram antigas demais.
      *
-     * A expiração continua baseada na última percepção
-     * da entidade.
-     *
-     * Isso significa que o histórico de combate poderá
-     * ser mantido enquanto a memória geral da entidade
-     * ainda estiver válida.
+     * Entidades sem histórico de ataque são esquecidas
+     * pouco depois de saírem de vista. Entidades que
+     * atacaram o mob continuam lembradas por mais tempo,
+     * contado a partir do último ataque.
      *
      * @param currentGameTime tempo atual do mundo
      */
@@ -264,6 +271,16 @@ public final class MobMemory {
                 currentGameTime
                         - memory.lastSeenGameTime();
 
-        return age > DEFAULT_MEMORY_DURATION_TICKS;
+        if (age <= DEFAULT_MEMORY_DURATION_TICKS) {
+            return false;
+        }
+
+        if (!memory.hasAttackHistory()) {
+            return true;
+        }
+
+        return memory.getLastAttackAge(
+                currentGameTime
+        ) > ATTACK_MEMORY_DURATION_TICKS;
     }
 }

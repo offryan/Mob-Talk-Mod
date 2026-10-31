@@ -41,7 +41,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
  *     ↓
  * MEMÓRIA
  *     ↓
- * RELACIONAMENTO
+ * RELACIONAMENTO (decaimento)
  *     ↓
  * CONTEXTO
  *     ↓
@@ -147,7 +147,18 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 2. CONTEXTO
+         * 2. RELACIONAMENTOS
+         * =====================================================
+         *
+         * A hostilidade diminui com o tempo sem novas
+         * agressões. Relações sem hostilidade com entidades
+         * que já saíram da memória são esquecidas.
+         */
+        updateRelationships(mob);
+
+        /*
+         * =====================================================
+         * 3. CONTEXTO
          * =====================================================
          *
          * Acontecimentos recentes que ultrapassaram sua
@@ -162,7 +173,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 3. AMEAÇA
+         * 4. AMEAÇA
          * =====================================================
          *
          * Cada entidade lembrada é avaliada uma única vez
@@ -173,7 +184,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 4. INTENÇÃO
+         * 5. INTENÇÃO
          * =====================================================
          *
          * O mob interpreta o que deseja fazer
@@ -198,7 +209,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 5. DECISÃO
+         * 6. DECISÃO
          * =====================================================
          *
          * A decisão transforma a intenção em uma
@@ -226,7 +237,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 6. COMPORTAMENTO
+         * 7. COMPORTAMENTO
          * =====================================================
          *
          * O comportamento representa aquilo que o mob
@@ -253,7 +264,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 7. EXECUTOR
+         * 8. EXECUTOR
          * =====================================================
          *
          * Finalmente o comportamento é convertido
@@ -271,6 +282,48 @@ public final class MobCognitionTicker {
                 currentDecision.type(),
                 currentBehavior.type()
         );
+    }
+
+    /**
+     * Aplica o decaimento da hostilidade e esquece
+     * relações que não têm mais motivo para existir.
+     *
+     * Uma relação é esquecida quando a hostilidade
+     * chegou a zero e a entidade não está mais na memória.
+     */
+    private static void updateRelationships(
+            Mob mob
+    ) {
+
+        MobRelationshipManager.decayHostility(
+                mob,
+                COGNITION_INTERVAL_TICKS
+        );
+
+        MobMemory memory =
+                MobMemoryManager.getMemory(mob);
+
+        if (memory == null) {
+            return;
+        }
+
+        int forgotten =
+                MobRelationshipManager.forgetRelationships(
+                        mob,
+                        relationship ->
+                                relationship.hostility() <= 0.0D
+                                        && !memory.remembers(
+                                                relationship.entityId()
+                                        )
+                );
+
+        if (forgotten > 0) {
+            MobTalk.LOGGER.debug(
+                    "MobTalk RELACIONAMENTO: {} esqueceu {} relação(ões)",
+                    mob.getType(),
+                    forgotten
+            );
+        }
     }
 
     /**

@@ -294,16 +294,20 @@ public final class MobIntentEvaluator {
         /*
          * HYSTERESIS DE AVOID
          *
-         * Se o mob estava evitando o mesmo alvo,
-         * mantemos AVOID enquanto ainda houver
-         * uma ameaça significativa.
+         * Se o mob estava evitando ou fugindo do mesmo
+         * alvo, mantemos pelo menos AVOID enquanto ainda
+         * houver uma ameaça significativa.
+         *
+         * Assim, ao terminar uma fuga, o mob continua
+         * evitando o alvo em vez de voltar direto a
+         * apenas observá-lo.
          */
         if (isSameTargetIntent(
                 previousIntent,
                 targetId
         )
-                && previousIntent.type()
-                == MobIntentType.AVOID
+                && (previousIntent.type() == MobIntentType.AVOID
+                        || previousIntent.type() == MobIntentType.FLEE)
                 && threat.score() > AVOID_EXIT_SCORE) {
 
             MobIntentType profileResponse =
