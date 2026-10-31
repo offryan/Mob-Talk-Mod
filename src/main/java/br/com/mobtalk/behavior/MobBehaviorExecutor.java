@@ -2,6 +2,8 @@ package br.com.mobtalk.behavior;
 
 import java.util.UUID;
 
+import br.com.mobtalk.perception.MobPerception;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,6 +31,13 @@ public final class MobBehaviorExecutor {
     private static final double AVOID_SPEED = 1.1D;
 
     private static final double FLEE_SPEED = 1.35D;
+
+    /**
+     * Distância máxima para observar, evitar ou fugir
+     * de um alvo: o mesmo alcance da percepção.
+     */
+    private static final double MAX_ACTION_DISTANCE =
+            MobPerception.DEFAULT_PERCEPTION_RADIUS;
 
     private MobBehaviorExecutor() {
         // Classe utilitária.
@@ -113,7 +122,7 @@ public final class MobBehaviorExecutor {
         }
 
         Entity target =
-                findTarget(
+                findTargetInRange(
                         mob,
                         behavior.targetId()
                 );
@@ -250,7 +259,7 @@ public final class MobBehaviorExecutor {
         }
 
         Entity target =
-                findTarget(
+                findTargetInRange(
                         mob,
                         behavior.targetId()
                 );
@@ -264,12 +273,17 @@ public final class MobBehaviorExecutor {
         }
 
         /*
-         * Remove um eventual alvo ofensivo da IA vanilla.
+         * Remove o alvo ofensivo da IA vanilla somente
+         * quando ele é a própria entidade evitada.
          *
          * Isso evita que um mob em estado defensivo tente
-         * atacar simultaneamente a entidade que está evitando.
+         * atacar simultaneamente a entidade que está evitando,
+         * sem apagar outros alvos legítimos.
          */
-        mob.setTarget(null);
+        releaseTargetIfMatches(
+                mob,
+                target
+        );
 
         mob.getLookControl().setLookAt(
                 target,
@@ -281,13 +295,12 @@ public final class MobBehaviorExecutor {
                 mob.distanceTo(target);
 
         /*
-         * Se já estiver suficientemente distante,
-         * não precisamos continuar navegando.
+         * Se já estiver suficientemente distante, a IA
+         * vanilla volta a decidir a navegação: nada é
+         * cancelado, para não travar passeio, pastagem
+         * ou reprodução.
          */
         if (distance >= AVOID_DISTANCE) {
-
-            mob.getNavigation().stop();
-
             return;
         }
 
@@ -316,7 +329,7 @@ public final class MobBehaviorExecutor {
         }
 
         Entity target =
-                findTarget(
+                findTargetInRange(
                         mob,
                         behavior.targetId()
                 );
@@ -331,9 +344,13 @@ public final class MobBehaviorExecutor {
 
         /*
          * Impede que a IA ofensiva vanilla entre em conflito
-         * com a decisão cognitiva de fugir.
+         * com a decisão cognitiva de fugir, sem apagar
+         * outros alvos legítimos.
          */
-        mob.setTarget(null);
+        releaseTargetIfMatches(
+                mob,
+                target
+        );
 
         mob.getLookControl().setLookAt(
                 target,
@@ -345,13 +362,10 @@ public final class MobBehaviorExecutor {
                 mob.distanceTo(target);
 
         /*
-         * Se já conseguimos uma distância segura,
-         * não precisamos continuar fugindo.
+         * Se já conseguimos uma distância segura, a IA
+         * vanilla volta a decidir a navegação.
          */
         if (distance >= FLEE_DISTANCE) {
-
-            mob.getNavigation().stop();
-
             return;
         }
 
@@ -506,5 +520,49 @@ public final class MobBehaviorExecutor {
         return serverLevel.getEntity(
                 targetId
         );
+    }
+
+    /**
+     * Procura o alvo somente se ele estiver dentro do
+     * alcance de percepção do mob.
+     *
+     * A memória pode lembrar de entidades distantes,
+     * mas o mob só reage fisicamente ao que está perto.
+     */
+    private static Entity findTargetInRange(
+            Mob mob,
+            UUID targetId
+    ) {
+
+        Entity target =
+                findTarget(
+                        mob,
+                        targetId
+                );
+
+        if (target == null) {
+            return null;
+        }
+
+        if (mob.distanceToSqr(target)
+                > MAX_ACTION_DISTANCE * MAX_ACTION_DISTANCE) {
+            return null;
+        }
+
+        return target;
+    }
+
+    /**
+     * Remove o alvo de ataque do mob apenas quando ele
+     * é a entidade informada.
+     */
+    private static void releaseTargetIfMatches(
+            Mob mob,
+            Entity entity
+    ) {
+
+        if (mob.getTarget() == entity) {
+            mob.setTarget(null);
+        }
     }
 }

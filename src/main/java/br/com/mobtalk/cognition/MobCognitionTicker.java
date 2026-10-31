@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import br.com.mobtalk.MobTalk;
+import br.com.mobtalk.MobTalkTags;
 import br.com.mobtalk.behavior.MobBehavior;
 import br.com.mobtalk.behavior.MobBehaviorExecutor;
 import br.com.mobtalk.behavior.MobBehaviorManager;
@@ -89,6 +90,14 @@ public final class MobCognitionTicker {
         }
 
         if (!mob.isAlive()) {
+            return;
+        }
+
+        /*
+         * Chefes e mobs com IA especial ficam fora do
+         * controle do MobTalk (tag mobtalk:ignored).
+         */
+        if (MobTalkTags.isIgnored(mob)) {
             return;
         }
 

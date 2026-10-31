@@ -1,6 +1,7 @@
 package br.com.mobtalk.interaction;
 
 import br.com.mobtalk.MobTalk;
+import br.com.mobtalk.MobTalkTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -50,6 +51,14 @@ public final class MobInteractionHandler {
          * do dano é um Mob.
          */
         if (!(event.getEntity() instanceof Mob mob)) {
+            return;
+        }
+
+        /*
+         * Mobs fora do controle do MobTalk também não
+         * acumulam memória nem relacionamentos.
+         */
+        if (MobTalkTags.isIgnored(mob)) {
             return;
         }
 
