@@ -49,11 +49,6 @@ public final class MobThreatEvaluator {
                         relationship
                 );
 
-        double familiarity =
-                getFamiliarity(
-                        relationship
-                );
-
         double recentDamage =
                 MobContextInterpreter.getRecentDamage(
                         mob,
@@ -87,7 +82,6 @@ public final class MobThreatEvaluator {
         double score =
                 calculateThreatScore(
                         hostility,
-                        familiarity,
                         recentDamage,
                         highestRecentDamage,
                         recentAttackCount,
@@ -159,35 +153,23 @@ public final class MobThreatEvaluator {
     }
 
     /**
-     * Obtém a familiaridade atual da relação.
-     */
-    private static double getFamiliarity(
-            MobRelationship relationship
-    ) {
-
-        if (relationship == null) {
-            return 0.0D;
-        }
-
-        return relationship.familiarity();
-    }
-
-    /**
      * Calcula a pontuação de ameaça.
      *
      * A pontuação combina:
      *
      * - hostilidade histórica;
-     * - familiaridade;
      * - dano recente;
      * - maior dano recente;
      * - quantidade de ataques;
      * - recência;
      * - repetição dos ataques.
+     *
+     * A familiaridade não entra no cálculo: conhecer
+     * uma entidade não a torna ameaçadora. Sem agressão,
+     * a ameaça é NONE e a IA vanilla segue no controle.
      */
     private static double calculateThreatScore(
             double hostility,
-            double familiarity,
             double recentDamage,
             double highestRecentDamage,
             int recentAttackCount,
@@ -197,9 +179,6 @@ public final class MobThreatEvaluator {
 
         double hostilityScore =
                 hostility * 0.30D;
-
-        double familiarityScore =
-                familiarity * 0.05D;
 
         double damageScore =
                 clamp(
@@ -228,7 +207,6 @@ public final class MobThreatEvaluator {
 
         double score =
                 hostilityScore
-                + familiarityScore
                 + damageScore
                 + highestDamageScore
                 + attackCountScore
