@@ -7,16 +7,18 @@ Mod para Minecraft 1.21.1 (NeoForge) que dá aos mobs vanilla percepção, memó
 ## ✨ Funcionalidades
 
 - **Percepção:** cada mob identifica as entidades vivas num raio de 16 blocos.
-- **Memória individual:** o que o mob viu (tipo, distância, última vez visto) e um histórico de combate por entidade (quantidade de ataques, dano total, maior dano, último ataque).
-- **Contexto recente:** acontecimentos de curto prazo, como "acabei de levar dano daquele jogador", separados da memória de longo prazo.
-- **Relacionamentos:** familiaridade, hostilidade e confiança de cada mob com cada entidade.
-- **Avaliação de ameaça:** pontuação de 0 a 1 com níveis `NONE`, `LOW`, `MODERATE`, `HIGH` e `CRITICAL`.
+- **Memória individual:** o que o mob viu (tipo, distância, última vez visto) e um histórico de combate por entidade (quantidade de ataques, dano efetivo total, maior dano, último ataque). Quem atacou o mob continua lembrado por cerca de 10 minutos, mesmo fora de vista.
+- **Contexto recente:** acontecimentos dos últimos 10 segundos, como "acabei de levar dano daquele jogador", separados da memória de longo prazo.
+- **Relacionamentos:** familiaridade, hostilidade e confiança de cada mob com cada entidade. A hostilidade cai pela metade a cada 5 minutos sem nova agressão.
+- **Avaliação de ameaça:** pontuação de 0 a 1 (`NONE` a `CRITICAL`) que junta o ataque recente, a lembrança dos ataques antigos (que vai se apagando) e a hostilidade. Fugir exige ataque recente; a lembrança sozinha só deixa o mob cauteloso.
 - **Perfis de comportamento:** passivo, neutro, agressivo e defensivo respondem de jeitos diferentes à mesma ameaça.
 - **Intenção com estabilidade:** observar, aproximar, evitar, fugir, atacar ou proteger, sem trocar de ideia a cada oscilação da ameaça.
-- **Execução física:** o mob olha, se aproxima, se afasta ou foge usando a navegação, o olhar e o alvo do próprio Minecraft.
+- **Execução física:** o mob olha, se aproxima, se afasta ou foge usando a navegação, o olhar e o alvo do próprio Minecraft, só para alvos a até 16 blocos. Fora disso, e sem ameaça, a IA vanilla segue no controle.
+- **Persistência:** memória e relacionamentos ficam gravados no próprio mob (attachments do NeoForge) e sobrevivem ao descarregamento do chunk, à troca de dimensão e ao reinício do mundo.
+- **Mobs ignorados:** a tag `mobtalk:ignored` tira chefes e mobs especiais do controle do mod (Ender Dragon, Wither, Warden e Elder Guardian por padrão); modpacks podem estendê-la.
 - **Comunicação interna:** mensagens entre entidades publicadas como eventos (base para o diálogo futuro).
 
-Já testado no jogo: uma vaca atacada pelo jogador passa de observar para evitar e para fugir, e volta a se acalmar quando a ameaça cai.
+Já testado no jogo: uma vaca atacada foge, passa a evitar o jogador depois que a fuga termina, se acalma conforme a lembrança decai e continua lembrando dos ataques depois de salvar e reabrir o mundo.
 
 ## 🧠 Como funciona
 
@@ -56,11 +58,12 @@ flowchart LR
 
 ## 🗺️ Próximos passos
 
-- [ ] Validar no jogo a memória acumulada de combate
-- [ ] Fazer o contexto recente expirar e calcular a ameaça uma vez por ciclo
-- [ ] Integrar a memória histórica ao cálculo de ameaça, com esquecimento e decaimento da hostilidade
-- [ ] Deixar o executor menos invasivo com a IA vanilla e filtrar mobs especiais (chefes, mobs com Brain)
-- [ ] Salvar memórias e relacionamentos no mundo
+- [x] Validar no jogo a memória acumulada de combate
+- [x] Fazer o contexto recente expirar e calcular a ameaça uma vez por ciclo
+- [x] Integrar a memória histórica ao cálculo de ameaça, com esquecimento e decaimento da hostilidade
+- [x] Deixar o executor menos invasivo com a IA vanilla e filtrar chefes
+- [x] Salvar memórias e relacionamentos no mundo
+- [ ] Observar mobs guiados por Brain (villager, piglin) e ajustar se o executor atrapalhar
 - [ ] Novas interações: ajuda, proteção, alimentação, troca, morte de aliados
 - [ ] Comunicação de verdade com jogadores e entre mobs
 
