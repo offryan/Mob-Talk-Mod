@@ -1,10 +1,10 @@
 package br.com.mobtalk.social;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import java.util.function.Predicate;
+
+import br.com.mobtalk.MobTalkAttachments;
 
 import net.minecraft.world.entity.Mob;
 
@@ -21,6 +21,9 @@ import net.minecraft.world.entity.Mob;
  * └── Creeper → familiaridade baixa
  *
  * Zumbi B possui outro conjunto completamente independente.
+ *
+ * As relações ficam em um attachment do NeoForge na própria
+ * entidade e são gravadas no NBT do mob.
  */
 public final class MobRelationshipManager {
 
@@ -31,9 +34,6 @@ public final class MobRelationshipManager {
      * 6000 ticks = aproximadamente 5 minutos.
      */
     public static final long HOSTILITY_HALF_LIFE_TICKS = 6000L;
-
-    private static final Map<Mob, Map<UUID, MobRelationship>>
-            RELATIONSHIPS = new WeakHashMap<>();
 
     private MobRelationshipManager() {
         // Classe utilitária.
@@ -57,12 +57,12 @@ public final class MobRelationshipManager {
             return;
         }
 
-        Map<UUID, MobRelationship> relationships =
-                RELATIONSHIPS.get(mob);
-
-        if (relationships == null) {
+        if (!mob.hasData(MobTalkAttachments.RELATIONSHIPS)) {
             return;
         }
+
+        Map<UUID, MobRelationship> relationships =
+                entries(mob);
 
         double factor =
                 Math.pow(
@@ -93,12 +93,12 @@ public final class MobRelationshipManager {
             return 0;
         }
 
-        Map<UUID, MobRelationship> relationships =
-                RELATIONSHIPS.get(mob);
-
-        if (relationships == null) {
+        if (!mob.hasData(MobTalkAttachments.RELATIONSHIPS)) {
             return 0;
         }
+
+        Map<UUID, MobRelationship> relationships =
+                entries(mob);
 
         int before =
                 relationships.size();
@@ -111,7 +111,7 @@ public final class MobRelationshipManager {
                 before - relationships.size();
 
         if (relationships.isEmpty()) {
-            RELATIONSHIPS.remove(mob);
+            mob.removeData(MobTalkAttachments.RELATIONSHIPS);
         }
 
         return removed;
@@ -132,13 +132,7 @@ public final class MobRelationshipManager {
             return null;
         }
 
-        Map<UUID, MobRelationship> relationships =
-                RELATIONSHIPS.computeIfAbsent(
-                        mob,
-                        ignored -> new HashMap<>()
-                );
-
-        return relationships.computeIfAbsent(
+        return entries(mob).computeIfAbsent(
                 entityId,
                 MobRelationship::initial
         );
@@ -156,13 +150,7 @@ public final class MobRelationshipManager {
             return;
         }
 
-        Map<UUID, MobRelationship> relationships =
-                RELATIONSHIPS.computeIfAbsent(
-                        mob,
-                        ignored -> new HashMap<>()
-                );
-
-        relationships.put(
+        entries(mob).put(
                 relationship.entityId(),
                 relationship
         );
@@ -180,14 +168,11 @@ public final class MobRelationshipManager {
             return;
         }
 
-        Map<UUID, MobRelationship> relationships =
-                RELATIONSHIPS.get(mob);
-
-        if (relationships == null) {
+        if (!mob.hasData(MobTalkAttachments.RELATIONSHIPS)) {
             return;
         }
 
-        relationships.remove(entityId);
+        entries(mob).remove(entityId);
     }
 
     /**
@@ -201,13 +186,18 @@ public final class MobRelationshipManager {
             return;
         }
 
-        RELATIONSHIPS.remove(mob);
+        mob.removeData(MobTalkAttachments.RELATIONSHIPS);
     }
 
     /**
-     * Remove todas as relações gerenciadas.
+     * Mapa de relações do mob, criado quando necessário.
      */
-    public static void clear() {
-        RELATIONSHIPS.clear();
+    private static Map<UUID, MobRelationship> entries(
+            Mob mob
+    ) {
+
+        return mob.getData(
+                MobTalkAttachments.RELATIONSHIPS
+        ).entries();
     }
 }

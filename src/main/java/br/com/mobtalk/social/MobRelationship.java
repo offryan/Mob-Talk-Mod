@@ -2,6 +2,11 @@ package br.com.mobtalk.social;
 
 import java.util.UUID;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+
+import net.minecraft.core.UUIDUtil;
+
 /**
  * Representa a relação de um mob com uma entidade específica.
  *
@@ -18,6 +23,25 @@ public record MobRelationship(
         double hostility,
         double trust
 ) {
+
+    /**
+     * Formato de gravação da relação no mundo.
+     */
+    public static final Codec<MobRelationship> CODEC =
+            RecordCodecBuilder.create(instance -> instance.group(
+                    UUIDUtil.CODEC
+                            .fieldOf("entity")
+                            .forGetter(MobRelationship::entityId),
+                    Codec.DOUBLE
+                            .fieldOf("familiarity")
+                            .forGetter(MobRelationship::familiarity),
+                    Codec.DOUBLE
+                            .fieldOf("hostility")
+                            .forGetter(MobRelationship::hostility),
+                    Codec.DOUBLE
+                            .fieldOf("trust")
+                            .forGetter(MobRelationship::trust)
+            ).apply(instance, MobRelationship::new));
 
     /**
      * Cria uma relação inicial.

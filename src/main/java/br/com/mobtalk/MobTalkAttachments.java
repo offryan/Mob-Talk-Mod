@@ -3,6 +3,7 @@ package br.com.mobtalk;
 import java.util.function.Supplier;
 
 import br.com.mobtalk.memory.MobMemory;
+import br.com.mobtalk.social.MobRelationships;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -41,6 +42,23 @@ public final class MobTalkAttachments {
                             .serialize(
                                     MobMemory.CODEC,
                                     memory -> !memory.isEmpty()
+                            )
+                            .build()
+            );
+
+    /**
+     * Relações sociais do mob.
+     *
+     * Conjuntos vazios não são gravados.
+     */
+    public static final Supplier<AttachmentType<MobRelationships>> RELATIONSHIPS =
+            ATTACHMENT_TYPES.register(
+                    "relationships",
+                    () -> AttachmentType
+                            .builder(() -> new MobRelationships())
+                            .serialize(
+                                    MobRelationships.CODEC,
+                                    relationships -> !relationships.isEmpty()
                             )
                             .build()
             );
