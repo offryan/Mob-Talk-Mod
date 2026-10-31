@@ -5,6 +5,7 @@ import br.com.mobtalk.behavior.MobBehavior;
 import br.com.mobtalk.behavior.MobBehaviorExecutor;
 import br.com.mobtalk.behavior.MobBehaviorManager;
 import br.com.mobtalk.behavior.MobBehaviorMapper;
+import br.com.mobtalk.context.MobContextManager;
 import br.com.mobtalk.decision.MobDecision;
 import br.com.mobtalk.decision.MobDecisionEvaluator;
 import br.com.mobtalk.decision.MobDecisionManager;
@@ -34,6 +35,8 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
  * MEMÓRIA
  *     ↓
  * RELACIONAMENTO
+ *     ↓
+ * CONTEXTO
  *     ↓
  * INTENÇÃO
  *     ↓
@@ -135,7 +138,22 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 2. INTENÇÃO
+         * 2. CONTEXTO
+         * =====================================================
+         *
+         * Acontecimentos recentes que ultrapassaram sua
+         * duração deixam de influenciar a interpretação.
+         *
+         * O conhecimento acumulado continua na memória.
+         */
+        MobContextManager.removeExpiredEvents(
+                mob,
+                mob.level().getGameTime()
+        );
+
+        /*
+         * =====================================================
+         * 3. INTENÇÃO
          * =====================================================
          *
          * O mob interpreta o que deseja fazer
@@ -160,7 +178,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 3. DECISÃO
+         * 4. DECISÃO
          * =====================================================
          *
          * A decisão transforma a intenção em uma
@@ -188,7 +206,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 4. COMPORTAMENTO
+         * 5. COMPORTAMENTO
          * =====================================================
          *
          * O comportamento representa aquilo que o mob
@@ -215,7 +233,7 @@ public final class MobCognitionTicker {
 
         /*
          * =====================================================
-         * 5. EXECUTOR
+         * 6. EXECUTOR
          * =====================================================
          *
          * Finalmente o comportamento é convertido

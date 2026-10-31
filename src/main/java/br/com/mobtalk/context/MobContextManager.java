@@ -63,6 +63,39 @@ public final class MobContextManager {
     }
 
     /**
+     * Remove os eventos expirados do contexto de um mob.
+     *
+     * Não cria contexto para mobs que ainda não possuem
+     * nenhum acontecimento registrado.
+     *
+     * Quando o contexto fica vazio, ele é descartado.
+     */
+    public static void removeExpiredEvents(
+            Mob mob,
+            long currentGameTime
+    ) {
+
+        if (mob == null) {
+            return;
+        }
+
+        MobContext context =
+                CONTEXTS.get(mob);
+
+        if (context == null) {
+            return;
+        }
+
+        context.removeExpiredEvents(
+                currentGameTime
+        );
+
+        if (context.size() == 0) {
+            CONTEXTS.remove(mob);
+        }
+    }
+
+    /**
      * Remove o contexto associado a um mob.
      */
     public static void removeContext(

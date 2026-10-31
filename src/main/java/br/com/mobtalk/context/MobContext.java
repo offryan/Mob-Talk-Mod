@@ -18,11 +18,24 @@ public final class MobContext {
 
     public static final long DEFAULT_EVENT_DURATION_TICKS = 200L;
 
+    /**
+     * Quantidade máxima de eventos mantidos no contexto.
+     *
+     * Protege contra crescimento excessivo quando muitos
+     * acontecimentos ocorrem dentro da janela de duração,
+     * como vários atacantes ao mesmo tempo.
+     */
+    public static final int MAX_EVENTS = 64;
+
     private final List<MobContextEvent> events =
             new ArrayList<>();
 
     /**
      * Adiciona um novo acontecimento ao contexto.
+     *
+     * Os eventos são mantidos em ordem de chegada.
+     * Quando o limite é atingido, o evento mais antigo
+     * é descartado.
      */
     public void addEvent(
             MobContextEvent event
@@ -33,6 +46,10 @@ public final class MobContext {
         }
 
         events.add(event);
+
+        while (events.size() > MAX_EVENTS) {
+            events.remove(0);
+        }
     }
 
     /**
