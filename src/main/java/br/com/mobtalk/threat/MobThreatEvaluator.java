@@ -4,6 +4,9 @@ import java.util.UUID;
 
 import br.com.mobtalk.MobTalk;
 import br.com.mobtalk.context.MobContextInterpreter;
+import br.com.mobtalk.memory.MemoryEntry;
+import br.com.mobtalk.memory.MobMemory;
+import br.com.mobtalk.memory.MobMemoryManager;
 import br.com.mobtalk.social.MobRelationship;
 import br.com.mobtalk.social.MobRelationshipManager;
 
@@ -17,8 +20,35 @@ import net.minecraft.world.entity.Mob;
  *
  * Sua responsabilidade é transformar informações cognitivas
  * em uma avaliação de ameaça.
+ *
+ * A pontuação é formada por:
+ *
+ * - social: hostilidade do relacionamento;
+ * - imediata: ataques recentes registrados no contexto;
+ * - histórica: ataques lembrados pela memória, que
+ *   perdem força com o tempo.
+ *
+ * Imediata e histórica descrevem os mesmos ataques em
+ * escalas de tempo diferentes, por isso entra apenas a
+ * maior das duas: um golpe nunca é contado duas vezes.
  */
 public final class MobThreatEvaluator {
+
+    /**
+     * Ticks para a lembrança de um ataque cair pela metade.
+     *
+     * 2400 ticks = aproximadamente 2 minutos.
+     */
+    public static final long HISTORY_HALF_LIFE_TICKS = 2400L;
+
+    /**
+     * Contribuição máxima da memória histórica.
+     *
+     * Somada à hostilidade máxima (0,30), fica abaixo do
+     * limiar de HIGH (0,60): o histórico pode levar um
+     * mob a evitar, mas fugir exige um ataque recente.
+     */
+    public static final double HISTORY_MAX_SCORE = 0.25D;
 
     private MobThreatEvaluator() {
         // Classe utilitária.
@@ -79,14 +109,34 @@ public final class MobThreatEvaluator {
                         targetId
                 );
 
-        double score =
-                calculateThreatScore(
-                        hostility,
+        double socialScore =
+                hostility * 0.30D;
+
+        double immediateScore =
+                calculateImmediateScore(
                         recentDamage,
                         highestRecentDamage,
                         recentAttackCount,
                         lastAttackAge,
                         repeatedAttack
+                );
+
+        double historicalScore =
+                calculateHistoricalScore(
+                        getMemoryEntry(
+                                mob,
+                                targetId
+                        ),
+                        mob.level().getGameTime()
+                );
+
+        double score =
+                clamp(
+                        socialScore
+                                + Math.max(
+                                        immediateScore,
+                                        historicalScore
+                                )
                 );
 
         MobThreatLevel level =
@@ -103,7 +153,10 @@ public final class MobThreatEvaluator {
                         recentDamage,
                         highestRecentDamage,
                         repeatedAttack,
-                        lastAttackAge
+                        lastAttackAge,
+                        immediateScore,
+                        historicalScore,
+                        socialScore
                 );
 
         /*
@@ -113,13 +166,25 @@ public final class MobThreatEvaluator {
          */
         if (MobTalk.LOGGER.isDebugEnabled()) {
             MobTalk.LOGGER.debug(
-                    "MobTalk AMEAÇA: {} | alvo={} | nível={} | score={} | ataques={} | dano={} | maiorDano={} | repetido={} | idade={} ticks",
+                    "MobTalk AMEAÇA: {} | alvo={} | nível={} | score={} | imediato={} | histórico={} | social={} | ataques={} | dano={} | maiorDano={} | repetido={} | idade={} ticks",
                     mob.getType(),
                     targetId,
                     level,
                     String.format(
                             "%.2f",
                             score
+                    ),
+                    String.format(
+                            "%.2f",
+                            immediateScore
+                    ),
+                    String.format(
+                            "%.2f",
+                            historicalScore
+                    ),
+                    String.format(
+                            "%.2f",
+                            socialScore
                     ),
                     recentAttackCount,
                     String.format(
@@ -153,11 +218,30 @@ public final class MobThreatEvaluator {
     }
 
     /**
-     * Calcula a pontuação de ameaça.
+     * Obtém a memória que o mob tem da entidade.
+     */
+    private static MemoryEntry getMemoryEntry(
+            Mob mob,
+            UUID targetId
+    ) {
+
+        MobMemory memory =
+                MobMemoryManager.getMemory(mob);
+
+        if (memory == null) {
+            return null;
+        }
+
+        return memory.getMemory(
+                targetId
+        );
+    }
+
+    /**
+     * Calcula a parte imediata da ameaça.
      *
-     * A pontuação combina:
+     * Combina, dentro da janela do contexto:
      *
-     * - hostilidade histórica;
      * - dano recente;
      * - maior dano recente;
      * - quantidade de ataques;
@@ -168,17 +252,13 @@ public final class MobThreatEvaluator {
      * uma entidade não a torna ameaçadora. Sem agressão,
      * a ameaça é NONE e a IA vanilla segue no controle.
      */
-    private static double calculateThreatScore(
-            double hostility,
+    private static double calculateImmediateScore(
             double recentDamage,
             double highestRecentDamage,
             int recentAttackCount,
             long lastAttackAge,
             boolean repeatedAttack
     ) {
-
-        double hostilityScore =
-                hostility * 0.30D;
 
         double damageScore =
                 clamp(
@@ -205,15 +285,48 @@ public final class MobThreatEvaluator {
                         ? 0.15D
                         : 0.0D;
 
-        double score =
-                hostilityScore
-                + damageScore
+        return damageScore
                 + highestDamageScore
                 + attackCountScore
                 + recencyScore
                 + repetitionScore;
+    }
 
-        return clamp(score);
+    /**
+     * Calcula a parte histórica da ameaça.
+     *
+     * Metade vem da quantidade de ataques lembrados e
+     * metade do dano total efetivo. O resultado perde
+     * força pela meia-vida desde o último ataque.
+     */
+    private static double calculateHistoricalScore(
+            MemoryEntry entry,
+            long currentGameTime
+    ) {
+
+        if (entry == null || !entry.hasAttackHistory()) {
+            return 0.0D;
+        }
+
+        double attackFactor =
+                clamp(
+                        entry.attackCount() / 5.0D
+                );
+
+        double damageFactor =
+                clamp(
+                        entry.totalDamageReceived() / 20.0D
+                );
+
+        double recall =
+                entry.getAttackRecall(
+                        currentGameTime,
+                        HISTORY_HALF_LIFE_TICKS
+                );
+
+        return HISTORY_MAX_SCORE
+                * (attackFactor * 0.5D + damageFactor * 0.5D)
+                * recall;
     }
 
     /**

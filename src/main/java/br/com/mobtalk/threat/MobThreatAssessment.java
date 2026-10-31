@@ -9,6 +9,13 @@ import java.util.UUID;
  * O assessment não executa nenhuma ação.
  * Ele apenas representa a interpretação atual
  * do nível de ameaça.
+ *
+ * A pontuação final é composta por três partes,
+ * guardadas separadamente para diagnóstico:
+ *
+ * - imediata: acontecimentos recentes do contexto;
+ * - histórica: ataques lembrados pela memória;
+ * - social: hostilidade do relacionamento.
  */
 public record MobThreatAssessment(
         UUID targetId,
@@ -18,7 +25,10 @@ public record MobThreatAssessment(
         double recentDamage,
         double highestRecentDamage,
         boolean repeatedAttack,
-        long lastAttackAge
+        long lastAttackAge,
+        double immediateScore,
+        double historicalScore,
+        double socialScore
 ) {
 
     /**
@@ -36,7 +46,10 @@ public record MobThreatAssessment(
                 0.0D,
                 0.0D,
                 false,
-                -1L
+                -1L,
+                0.0D,
+                0.0D,
+                0.0D
         );
     }
 
@@ -51,7 +64,10 @@ public record MobThreatAssessment(
             double recentDamage,
             double highestRecentDamage,
             boolean repeatedAttack,
-            long lastAttackAge
+            long lastAttackAge,
+            double immediateScore,
+            double historicalScore,
+            double socialScore
     ) {
 
         return new MobThreatAssessment(
@@ -62,8 +78,19 @@ public record MobThreatAssessment(
                 recentDamage,
                 highestRecentDamage,
                 repeatedAttack,
-                lastAttackAge
+                lastAttackAge,
+                immediateScore,
+                historicalScore,
+                socialScore
         );
+    }
+
+    /**
+     * Indica se a ameaça vem de um ataque recente,
+     * registrado no contexto.
+     */
+    public boolean hasRecentAttack() {
+        return recentAttackCount > 0;
     }
 
     /**

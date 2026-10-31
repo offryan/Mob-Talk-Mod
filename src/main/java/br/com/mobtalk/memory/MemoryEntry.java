@@ -171,4 +171,34 @@ public record MemoryEntry(
 
         return age >= 0L && age <= maxAge;
     }
+
+    /**
+     * Indica quanto o histórico de ataques ainda é
+     * lembrado com força, entre 0 e 1.
+     *
+     * O valor cai pela metade a cada meia-vida desde
+     * o último ataque. Sem histórico, retorna 0.
+     *
+     * @param currentGameTime tempo atual do mundo
+     * @param halfLifeTicks ticks para a lembrança cair pela metade
+     */
+    public double getAttackRecall(
+            long currentGameTime,
+            long halfLifeTicks
+    ) {
+
+        long age =
+                getLastAttackAge(
+                        currentGameTime
+                );
+
+        if (age < 0L || halfLifeTicks <= 0L) {
+            return 0.0D;
+        }
+
+        return Math.pow(
+                0.5D,
+                (double) age / halfLifeTicks
+        );
+    }
 }

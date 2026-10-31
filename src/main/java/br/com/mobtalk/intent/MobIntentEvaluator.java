@@ -253,6 +253,10 @@ public final class MobIntentEvaluator {
          * Se o mob já estava fugindo do mesmo alvo,
          * ele continua fugindo enquanto a ameaça
          * permanecer acima do limite de saída.
+         *
+         * A fuga só se mantém enquanto houver ataque
+         * recente: hostilidade e memória histórica,
+         * sozinhas, não sustentam uma fuga.
          */
         if (isSameTargetIntent(
                 previousIntent,
@@ -260,6 +264,7 @@ public final class MobIntentEvaluator {
         )
                 && previousIntent.type()
                 == MobIntentType.FLEE
+                && threat.hasRecentAttack()
                 && threat.score() > FLEE_EXIT_SCORE) {
 
             double priority =
