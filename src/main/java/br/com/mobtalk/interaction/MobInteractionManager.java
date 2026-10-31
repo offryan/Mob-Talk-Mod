@@ -33,11 +33,21 @@ public final class MobInteractionManager {
      * - acumula o histórico de dano;
      * - aumenta a familiaridade;
      * - aumenta a hostilidade.
+     *
+     * Um segundo evento do mesmo atacante no mesmo tick
+     * é ignorado, para que um golpe não seja contado
+     * duas vezes.
+     *
+     * @param originalDamage dano antes das reduções;
+     *                       indica a intenção de ferir
+     * @param effectiveDamage dano que realmente atingiu
+     *                        o mob; usado como intensidade
      */
     public static void onDamagedBy(
             Mob mob,
             Entity attacker,
-            float damage
+            float originalDamage,
+            float effectiveDamage
     ) {
 
         if (mob == null || attacker == null) {
@@ -48,12 +58,44 @@ public final class MobInteractionManager {
             return;
         }
 
-        if (damage <= 0.0F) {
+        if (originalDamage <= 0.0F) {
             return;
         }
 
         long gameTime =
                 mob.level().getGameTime();
+
+        if (wasAlreadyRegistered(
+                mob,
+                attacker,
+                gameTime
+        )) {
+
+            MobTalk.LOGGER.debug(
+                    "MobTalk: dano duplicado ignorado para {} <- {} no tick {}",
+                    mob.getType(),
+                    attacker.getType(),
+                    gameTime
+            );
+
+            return;
+        }
+
+        if (MobTalk.LOGGER.isDebugEnabled()) {
+            MobTalk.LOGGER.debug(
+                    "MobTalk DANO: {} <- {} | original={} | efetivo={}",
+                    mob.getType(),
+                    attacker.getType(),
+                    String.format(
+                            "%.2f",
+                            originalDamage
+                    ),
+                    String.format(
+                            "%.2f",
+                            effectiveDamage
+                    )
+            );
+        }
 
         MobInteraction interaction =
                 new MobInteraction(
@@ -61,7 +103,10 @@ public final class MobInteractionManager {
                         attacker.getUUID(),
                         MobInteraction.MobInteractionType.DAMAGED_BY,
                         gameTime,
-                        damage
+                        Math.max(
+                                0.0F,
+                                effectiveDamage
+                        )
                 );
 
         processInteraction(
@@ -69,6 +114,32 @@ public final class MobInteractionManager {
                 attacker,
                 interaction
         );
+    }
+
+    /**
+     * Verifica se um ataque desse atacante já foi
+     * registrado neste mesmo tick.
+     */
+    private static boolean wasAlreadyRegistered(
+            Mob mob,
+            Entity attacker,
+            long gameTime
+    ) {
+
+        MobMemory memory =
+                MobMemoryManager.getMemory(mob);
+
+        if (memory == null) {
+            return false;
+        }
+
+        MemoryEntry entry =
+                memory.getMemory(
+                        attacker.getUUID()
+                );
+
+        return entry != null
+                && entry.lastAttackGameTime() == gameTime;
     }
 
     /**

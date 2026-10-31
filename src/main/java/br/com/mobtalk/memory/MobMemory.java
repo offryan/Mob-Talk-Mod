@@ -93,17 +93,18 @@ public final class MobMemory {
     }
 
     /**
-     * Registra dano recebido de uma entidade.
+     * Registra um ataque recebido de uma entidade.
      *
      * O histórico de combate é acumulado na memória
-     * existente da entidade.
+     * existente da entidade. Ataques sem dano efetivo
+     * também são contados.
      *
      * Caso ainda não exista memória para a entidade,
      * uma nova memória será criada.
      *
      * @param entityId UUID da entidade que causou o dano
      * @param entityType tipo da entidade que causou o dano
-     * @param damage quantidade de dano recebido
+     * @param damage dano efetivamente recebido (pode ser zero)
      * @param gameTime momento do ataque
      * @param distance distância atual entre as entidades
      * @param alive estado atual conhecido da entidade
@@ -118,10 +119,6 @@ public final class MobMemory {
     ) {
 
         if (entityId == null) {
-            return;
-        }
-
-        if (damage <= 0.0D) {
             return;
         }
 

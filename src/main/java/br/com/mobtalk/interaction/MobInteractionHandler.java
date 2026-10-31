@@ -71,19 +71,25 @@ public final class MobInteractionHandler {
         }
 
         /*
-         * Nesta versão, utilizamos o valor original
-         * fornecido pela DamageSource como intensidade
-         * da interação.
+         * O dano original indica se houve intenção de ferir:
+         * sem ele, não há ataque a registrar.
          *
-         * Posteriormente podemos utilizar o valor final
-         * efetivamente aplicado, caso necessário.
+         * O dano efetivo (depois de armadura, resistência
+         * e escudo) é o que realmente machucou o mob e é
+         * usado como intensidade da interação.
          */
-        float damage =
+        float originalDamage =
                 event.getOriginalDamage();
 
-        if (damage <= 0.0F) {
+        if (originalDamage <= 0.0F) {
             return;
         }
+
+        float effectiveDamage =
+                Math.max(
+                        0.0F,
+                        event.getNewDamage()
+                );
 
         /*
          * Registra a interação social.
@@ -91,7 +97,8 @@ public final class MobInteractionHandler {
         MobInteractionManager.onDamagedBy(
                 mob,
                 attacker,
-                damage
+                originalDamage,
+                effectiveDamage
         );
     }
 }

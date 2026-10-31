@@ -88,19 +88,28 @@ public record MemoryEntry(
     }
 
     /**
-     * Registra um novo dano recebido da entidade.
+     * Registra um novo ataque recebido da entidade.
      *
      * O acontecimento é incorporado ao conhecimento
      * acumulado da memória.
+     *
+     * O ataque é contado mesmo quando o dano efetivo
+     * é zero (absorvido por armadura, resistência ou
+     * escudo): a intenção de ferir também é lembrada.
+     *
+     * @param damage dano efetivamente recebido
+     * @param gameTime momento do ataque
      */
     public MemoryEntry registerDamage(
             double damage,
             long gameTime
     ) {
 
-        if (damage <= 0.0D) {
-            return this;
-        }
+        double effectiveDamage =
+                Math.max(
+                        0.0D,
+                        damage
+                );
 
         return new MemoryEntry(
                 entityId,
@@ -109,10 +118,10 @@ public record MemoryEntry(
                 lastKnownDistance,
                 alive,
                 attackCount + 1,
-                totalDamageReceived + damage,
+                totalDamageReceived + effectiveDamage,
                 Math.max(
                         highestDamageReceived,
-                        damage
+                        effectiveDamage
                 ),
                 gameTime
         );
