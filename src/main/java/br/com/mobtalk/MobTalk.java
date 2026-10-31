@@ -39,6 +39,8 @@ public class MobTalk {
             ModContainer modContainer
     ) {
 
+        MobTalkAttachments.register(modEventBus);
+
         LOGGER.info("=================================");
         LOGGER.info("MobTalk iniciado!");
         LOGGER.info("Sistema cognitivo carregado.");

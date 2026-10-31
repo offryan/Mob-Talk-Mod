@@ -2,6 +2,11 @@ package br.com.mobtalk.memory;
 
 import java.util.UUID;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+
+import net.minecraft.core.UUIDUtil;
+
 /**
  * Representa uma informação armazenada na memória de um mob.
  *
@@ -37,6 +42,44 @@ public record MemoryEntry(
         double highestDamageReceived,
         long lastAttackGameTime
 ) {
+
+    /**
+     * Formato de gravação da entrada no mundo.
+     *
+     * Os tempos usam o relógio do mundo, que também é
+     * salvo, então idades e decaimentos continuam
+     * corretos depois de recarregar.
+     */
+    public static final Codec<MemoryEntry> CODEC =
+            RecordCodecBuilder.create(instance -> instance.group(
+                    UUIDUtil.CODEC
+                            .fieldOf("entity")
+                            .forGetter(MemoryEntry::entityId),
+                    Codec.STRING
+                            .fieldOf("type")
+                            .forGetter(MemoryEntry::entityType),
+                    Codec.LONG
+                            .fieldOf("last_seen")
+                            .forGetter(MemoryEntry::lastSeenGameTime),
+                    Codec.DOUBLE
+                            .fieldOf("distance")
+                            .forGetter(MemoryEntry::lastKnownDistance),
+                    Codec.BOOL
+                            .fieldOf("alive")
+                            .forGetter(MemoryEntry::alive),
+                    Codec.INT
+                            .fieldOf("attacks")
+                            .forGetter(MemoryEntry::attackCount),
+                    Codec.DOUBLE
+                            .fieldOf("total_damage")
+                            .forGetter(MemoryEntry::totalDamageReceived),
+                    Codec.DOUBLE
+                            .fieldOf("highest_damage")
+                            .forGetter(MemoryEntry::highestDamageReceived),
+                    Codec.LONG
+                            .fieldOf("last_attack")
+                            .forGetter(MemoryEntry::lastAttackGameTime)
+            ).apply(instance, MemoryEntry::new));
 
     /**
      * Cria uma memória inicial para uma entidade

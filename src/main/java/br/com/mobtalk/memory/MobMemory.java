@@ -3,8 +3,12 @@ package br.com.mobtalk.memory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
  * Representa a memória de um mob.
@@ -44,11 +48,69 @@ public final class MobMemory {
     public static final long ATTACK_MEMORY_DURATION_TICKS = 12000L;
 
     /**
+     * Versão do formato gravado no mundo.
+     *
+     * Deve ser incrementada quando o formato mudar, para
+     * que memórias gravadas em versões antigas possam ser
+     * convertidas na leitura.
+     */
+    public static final int SCHEMA_VERSION = 1;
+
+    /**
+     * Formato de gravação da memória no mundo.
+     */
+    public static final Codec<MobMemory> CODEC =
+            RecordCodecBuilder.create(instance -> instance.group(
+                    Codec.INT
+                            .optionalFieldOf("version", 1)
+                            .forGetter(memory -> SCHEMA_VERSION),
+                    MemoryEntry.CODEC
+                            .listOf()
+                            .fieldOf("entries")
+                            .forGetter(memory -> List.copyOf(
+                                    memory.memories.values()
+                            ))
+            ).apply(instance, MobMemory::fromSaved));
+
+    /**
      * Armazena as memórias utilizando o UUID da entidade
      * percebida como identificador.
      */
     private final Map<UUID, MemoryEntry> memories =
             new HashMap<>();
+
+    /**
+     * Reconstrói a memória a partir dos dados gravados.
+     *
+     * A versão 1 é o formato atual e não precisa de
+     * conversão.
+     */
+    private static MobMemory fromSaved(
+            int version,
+            List<MemoryEntry> entries
+    ) {
+
+        MobMemory memory =
+                new MobMemory();
+
+        for (MemoryEntry entry : entries) {
+            memory.memories.put(
+                    entry.entityId(),
+                    entry
+            );
+        }
+
+        return memory;
+    }
+
+    /**
+     * Indica se não há nada lembrado.
+     *
+     * Memórias vazias não são gravadas no mundo.
+     */
+    public boolean isEmpty() {
+        return memories.isEmpty();
+    }
 
     /**
      * Adiciona ou atualiza uma memória.
